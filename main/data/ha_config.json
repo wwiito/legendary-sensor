@@ -1,0 +1,36 @@
+{
+    "wifi": {
+      "wifi_name" : "Connecting_24",
+      "wifi_pass" : "__MAM_OGROMNY_WALEC__"
+    },
+    "sleep_cfg": {
+      "sleep_length_sec" : "600"
+    },
+    "aws": {
+      "aws_ca_cert" : "/certs/aws-root-ca.pem",
+      "aws_certificate" : "/certs/certificate.pem.crt",
+      "aws_private_key" : "/certs/private.pem.key",
+      "aws_endpoint" : "a1vy5nvorg0e97-ats.iot.eu-central-1.amazonaws.com",
+      "aws_thing_name" : "esptest"
+    },
+    "device": {
+    	"sleep_length" : 300,
+    	"device_location" : "/home/mieszkanie/lazienka/",
+    	"device_id" : 1000
+    },
+    "sensor_configuration": {
+    	"onewire_bus_count" : 1,
+    	"onewire_bus_0" : {
+    		"bus_gpio" : 12,
+    		"rmt_rx" : 0,
+    		"rmt_tx" : 1,
+    		"sensor_count" : 1,
+	    	"sensor_0" : {
+	    		"name" : "temperature_0",
+	    		"meas_type" : "temperature",
+	    		"sensor_type" : "ds18b20",
+	    		"rom_code" : "b800000a39138a28"
+	    	}
+    	}
+    }
+}
