@@ -39,6 +39,14 @@ IoT_Error_t aws_connection_mqtt::init_connection() {
 	return rc;
 }
 
+IoT_Error_t aws_connection_mqtt::update_shadow_status() {
+	return SUCCESS;
+}
+
+IoT_Error_t aws_connection_mqtt::publish_shadow_update() {
+	return SUCCESS;
+}
+
 IoT_Error_t aws_connection_mqtt::connect(int reconnect_count = 3) {
 	IoT_Error_t rc;
 

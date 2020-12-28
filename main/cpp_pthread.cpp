@@ -112,6 +112,7 @@ void handle_onewire_sensor_bus(nlohmann::json &cfg, int bus_id, rtos_semaphore &
 			results["state"]["reported"]["sensors"][sensor_name]["meas_type"]   = cfg["sensor_configuration"][bus_name][sensor_name]["meas_type"].get<std::string>();
 			results["state"]["reported"]["sensors"][sensor_name]["type"]        = cfg["sensor_configuration"][bus_name][sensor_name]["sensor_type"].get<std::string>();
 			results["state"]["reported"]["sensors"][sensor_name]["name"]        = cfg["sensor_configuration"][bus_name][sensor_name]["name"].get<std::string>();
+			results["state"]["reported"]["sensors"][sensor_name]["sensor_id"]        = cfg["sensor_configuration"][bus_name][sensor_name]["sensor_id"].get<int>();
 			results["state"]["reported"]["sensors"][sensor_name]["value"]       = temp;
 			results["state"]["reported"]["sensors"]["sensor_count"] = count + 1;
 			result_sem.give();
@@ -176,13 +177,21 @@ extern "C" void app_main(void)
     w.set_creditentials(cfg["wifi"]["wifi_name"].get<std::string>(), cfg["wifi"]["wifi_pass"].get<std::string>());
     w.wifi_start_sta();
 
+    /* Get unique device id */
+    uint64_t dev_id = 0;
+    esp_efuse_mac_get_default(reinterpret_cast<uint8_t *>(&dev_id));
+	ESP_LOGI(TAG, "Device id: %llx", dev_id);
+
     /* Certs and params for AWS IoT cloud */
-    esp_file aws_root_ca               = esp_file(config_fs, cfg["aws"]["aws_ca_cert"].get<std::string>());
-    esp_file aws_dev_certificate       = esp_file(config_fs, cfg["aws"]["aws_certificate"].get<std::string>());
-    esp_file aws_dev_private_key       = esp_file(config_fs, cfg["aws"]["aws_private_key"].get<std::string>());
-    std::string aws_endpoint           = cfg["aws"]["aws_endpoint"].get<std::string>();
-    std::string aws_thing_name         = cfg["aws"]["aws_thing_name"].get<std::string>();
-    std::string aws_thing_mqtt_channel = "$aws/things/" + aws_thing_name + "/shadow/update";
+    esp_file aws_root_ca                 = esp_file(config_fs, cfg["aws"]["aws_ca_cert"].get<std::string>());
+    esp_file aws_dev_certificate         = esp_file(config_fs, cfg["aws"]["aws_certificate"].get<std::string>());
+    esp_file aws_dev_private_key         = esp_file(config_fs, cfg["aws"]["aws_private_key"].get<std::string>());
+    std::string aws_endpoint             = cfg["aws"]["aws_endpoint"].get<std::string>();
+    std::string aws_thing_name           = cfg["aws"]["aws_thing_name"].get<std::string>();
+    std::string aws_thing_mqtt_channel   = "$aws/things/" + aws_thing_name + "/shadow/update";
+    std::string aws_thing_mqtt_receive   = "$aws/things/" + aws_thing_name + "/shadow/get/accepted";
+    std::string aws_thing_mqtt_request   = "$aws/things/" + aws_thing_name + "/shadow/get";
+
 
     /* Parameters for device configuration */
     std::string device_location = cfg["device"]["device_location"].get<std::string>();
@@ -195,16 +204,20 @@ extern "C" void app_main(void)
     c.device_Cert(aws_dev_certificate);
     c.private_Key(aws_dev_private_key);
     c.client_ID(device_ID);
+    c.device_name(aws_thing_name);
 
     w.wait_for_ready();
 
     if (SUCCESS != c.init_connection())
         abort();
     c.connect(3);
-
     measurement_done.take();
 
+    /* Register channel */
+    //aws_iot_mqtt_subscribe(&c.client, &aws_thing_mqtt_receive[0], aws_thing_mqtt_receive.length(), QOS0, iot_subscribe_callback_handler, NULL);
+
     /* Device IDX */
+    measurement_results["state"]["reported"]["unique_id"] = dev_id;
     measurement_results["state"]["reported"]["id"] = device_idx;
     measurement_results["state"]["reported"]["sensors"]["sensor_stats"]["soc"]   	   = 35;
     measurement_results["state"]["reported"]["sensors"]["sensor_stats"]["rssid"]     = 15;
@@ -223,18 +236,10 @@ extern "C" void app_main(void)
 		measurement_results["state"]["reported"]["sensors"][sensor_name]["type"]        = "V";
 		measurement_results["state"]["reported"]["sensors"][sensor_name]["name"]        = "battery_voltage";
 		measurement_results["state"]["reported"]["sensors"][sensor_name]["value"]       = volts;
+		measurement_results["state"]["reported"]["sensors"][sensor_name]["sensor_id"]   = 10;
 		measurement_results["state"]["reported"]["sensors"]["sensor_count"] = count + 1;
     } catch (...) {
-    	ESP_LOGI(TAG, "exception");
-
-		int count = measurement_results["state"]["reported"]["sensors"]["sensor_count"];
-		std::string sensor_name = "sensor_" + std::to_string(count);
-		measurement_results["state"]["reported"]["sensors"][sensor_name]["meas_type"]   = "battery_voltage";
-		measurement_results["state"]["reported"]["sensors"][sensor_name]["type"]        = "V";
-		measurement_results["state"]["reported"]["sensors"][sensor_name]["name"]        = "battery_voltage";
-		measurement_results["state"]["reported"]["sensors"][sensor_name]["value"]       = 0xffff;
-		measurement_results["state"]["reported"]["sensors"]["sensor_count"] = count + 1;
-
+    	ESP_LOGI(TAG, "Failed to get battery voltage");
 	}
 
     auto s = measurement_results.dump();

@@ -43,6 +43,8 @@ public:
 	~aws_connection_mqtt() {};
 	IoT_Error_t init_connection();
 	IoT_Error_t connect(int reconnect_count);
+	IoT_Error_t update_shadow_status();
+	IoT_Error_t publish_shadow_update();
 
 	void autoReconnectStatus(bool status) { mqtt_initParams.enableAutoReconnect = status;}
 	void endpoint_URL(std::string &URL) {mqtt_initParams.pHostURL = reinterpret_cast<char *>(&URL[0]);}
@@ -51,14 +53,32 @@ public:
 	void device_Cert(esp_file &f) {mqtt_initParams.pDeviceCertLocation = reinterpret_cast<const char *>(f.get_file_buffer());}
 	void private_Key(esp_file &f) {mqtt_initParams.pDevicePrivateKeyLocation = reinterpret_cast<const char *>(f.get_file_buffer());}
 	void client_ID(std::string &id);
-	void device_name(std::string &name) {};
+	void device_name(std::string &name) {thing_name = name;}
 	IoT_Error_t publish_msg(aws_publish_message &msg);
 
 private:
 	IoT_Client_Init_Params    mqtt_initParams;
 	IoT_Client_Connect_Params mqtt_connectParams;
 
+	std::string construct_base_topic() {
+		std::string tmp = "$aws/things/" + this->thing_name;
+		return tmp;
+	}
+	std::string construct_update_topic() {
+		std::string tmp = construct_base_topic() + "/shadow/update";
+		return tmp;
+	}
+	std::string construct_get_topic() {
+		std::string tmp = construct_base_topic() + "/shadow/get/accepted";
+		return tmp;
+	}
+	std::string construct_fetch_topic() {
+		std::string tmp = construct_base_topic() + "/shadow/get";
+		return tmp;
+	}
+
 	std::string client_id;
+	std::string thing_name;
 	std::string TAG = "AWS_CONNECTION_MQTT";
 };
 
