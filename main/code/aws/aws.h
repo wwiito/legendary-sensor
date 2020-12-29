@@ -33,7 +33,7 @@ public:
 	IoT_Error_t connect_shadow();
 
 	IoT_Error_t yeld(int yeld_timeout=10) {return aws_iot_mqtt_yield(&client, yeld_timeout);}
-	IoT_Error_t publish_msg(aws_publish_message &msg);
+	IoT_Error_t publish_msg(aws_mqtt_message &msg);
 
 	void autoReconnectStatus(bool status) { mqtt_initParams.enableAutoReconnect = status;}
 	void endpoint_URL(std::string &URL) {mqtt_initParams.pHostURL = reinterpret_cast<char *>(&URL[0]);}

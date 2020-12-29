@@ -16,9 +16,9 @@
 
 #include <string>
 
-class aws_publish_message {
+class aws_mqtt_message {
 public:
-	aws_publish_message(QoS q, void * payload, int payloadLength, const std::string & mqtt_topic)
+	aws_mqtt_message(QoS q, void * payload, int payloadLength, const std::string & mqtt_topic)
 	:topic(mqtt_topic)
 	{
 		p.qos = q;

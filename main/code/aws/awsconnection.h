@@ -54,7 +54,7 @@ public:
 	void private_Key(esp_file &f) {mqtt_initParams.pDevicePrivateKeyLocation = reinterpret_cast<const char *>(f.get_file_buffer());}
 	void client_ID(std::string &id);
 	void device_name(std::string &name) {thing_name = name;}
-	IoT_Error_t publish_msg(aws_publish_message &msg);
+	IoT_Error_t publish_msg(aws_mqtt_message &msg);
 
 private:
 	IoT_Client_Init_Params    mqtt_initParams;

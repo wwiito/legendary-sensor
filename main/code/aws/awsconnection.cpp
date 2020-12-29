@@ -67,6 +67,6 @@ IoT_Error_t aws_connection_mqtt::connect(int reconnect_count = 3) {
 	return rc;
 }
 
-IoT_Error_t aws_connection_mqtt::publish_msg(aws_publish_message &msg) {
+IoT_Error_t aws_connection_mqtt::publish_msg(aws_mqtt_message &msg) {
 	return aws_iot_mqtt_publish(&(aws_connection::get_client()), msg.get_topic().data(), msg.get_topic().length(), msg.get_raw_msg());
 }

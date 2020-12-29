@@ -243,7 +243,7 @@ extern "C" void app_main(void)
 	}
 
     auto s = measurement_results.dump();
-    aws_publish_message msg = aws_publish_message(QOS0, reinterpret_cast<void *>(&s[0]), s.length(), aws_thing_mqtt_channel);
+    aws_mqtt_message msg = aws_mqtt_message(QOS0, reinterpret_cast<void *>(&s[0]), s.length(), aws_thing_mqtt_channel);
     c.publish_msg(msg);
 
     if( NETWORK_ATTEMPTING_RECONNECT == c.yeld(1)) {
