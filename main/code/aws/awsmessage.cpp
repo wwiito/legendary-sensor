@@ -5,5 +5,5 @@
  *      Author: wit
  */
 
-#include "awspublishmessage.h"
+#include <awsmessage.h>
 

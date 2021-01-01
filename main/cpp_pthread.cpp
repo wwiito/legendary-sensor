@@ -1,3 +1,4 @@
+#include <aws.h>
 #include "spifs.h"
 #include "espfile.h"
 #include "wifi.h"
@@ -17,8 +18,6 @@
 #include "aws_iot_log.h"
 #include "aws_iot_version.h"
 #include "aws_iot_mqtt_client_interface.h"
-
-#include "aws.h"
 
 #include "onewirebus.h"
 #include "ds18b20.h"
@@ -243,7 +242,7 @@ extern "C" void app_main(void)
 	}
 
     auto s = measurement_results.dump();
-    aws_mqtt_message msg = aws_mqtt_message(QOS0, reinterpret_cast<void *>(&s[0]), s.length(), aws_thing_mqtt_channel);
+    aws_mqtt_message msg = aws_mqtt_message(QOS0, reinterpret_cast<void *>(&s[0]), s.length(), c.construct_update_topic());
     c.publish_msg(msg);
 
     if( NETWORK_ATTEMPTING_RECONNECT == c.yeld(1)) {

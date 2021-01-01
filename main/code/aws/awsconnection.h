@@ -7,10 +7,9 @@
 #include "aws_iot_version.h"
 #include "aws_iot_mqtt_client_interface.h"
 #include "aws_iot_shadow_interface.h"
-#include "awspublishmessage.h"
-
 #include <string>
 
+#include "awsmessage.h"
 #include "espfile.h"
 
 
@@ -56,14 +55,6 @@ public:
 	void device_name(std::string &name) {thing_name = name;}
 	IoT_Error_t publish_msg(aws_mqtt_message &msg);
 
-private:
-	IoT_Client_Init_Params    mqtt_initParams;
-	IoT_Client_Connect_Params mqtt_connectParams;
-
-	std::string construct_base_topic() {
-		std::string tmp = "$aws/things/" + this->thing_name;
-		return tmp;
-	}
 	std::string construct_update_topic() {
 		std::string tmp = construct_base_topic() + "/shadow/update";
 		return tmp;
@@ -74,6 +65,15 @@ private:
 	}
 	std::string construct_fetch_topic() {
 		std::string tmp = construct_base_topic() + "/shadow/get";
+		return tmp;
+	}
+
+private:
+	IoT_Client_Init_Params    mqtt_initParams;
+	IoT_Client_Connect_Params mqtt_connectParams;
+
+	std::string construct_base_topic() {
+		std::string tmp = "$aws/things/" + this->thing_name;
 		return tmp;
 	}
 
