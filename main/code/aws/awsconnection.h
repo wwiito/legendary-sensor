@@ -54,6 +54,8 @@ public:
 	void client_ID(std::string &id);
 	void device_name(std::string &name) {thing_name = name;}
 	IoT_Error_t publish_msg(aws_mqtt_message &msg);
+	IoT_Error_t attach_topic(std::string &topic);
+	static void receive_handler(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData);
 
 	std::string construct_update_topic() {
 		std::string tmp = construct_base_topic() + "/shadow/update";
@@ -79,7 +81,8 @@ private:
 
 	std::string client_id;
 	std::string thing_name;
-	std::string TAG = "AWS_CONNECTION_MQTT";
+	static std::string TAG;
+	static bool param_log_received_messages;
 };
 
 #endif /* MAIN_CODE_AWS_AWSCONNECTION_H_ */

@@ -10,6 +10,33 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#include <cstring>
+
+std::string aws_connection_mqtt::TAG = "AWS_CONNECTION_MQTT";
+bool aws_connection_mqtt::param_log_received_messages = true;
+
+void aws_connection_mqtt::receive_handler(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData) {
+	ESP_LOGI(TAG.data(), "In receive handler");
+	if (aws_connection_mqtt::param_log_received_messages) {
+		char *tmp_topic = new char [topicNameLen+1];
+		char *tmp_payload = new char[params->payloadLen+1];
+		if(!tmp_topic || !tmp_payload) {
+			ESP_LOGI(TAG.data(), "Memory allocation fail");
+			return;
+		}
+		memset(tmp_topic, 0x00, topicNameLen+1);
+		memset(tmp_payload, 0x00, params->payloadLen+1);
+
+		memcpy(tmp_topic, topicName, topicNameLen);
+		memcpy(tmp_payload, params->payload, params->payloadLen);
+
+		ESP_LOGI(TAG.data(), "topic name: %s", tmp_topic);
+		ESP_LOGI(TAG.data(), "Payload: %s", tmp_payload);
+		delete[](tmp_topic);
+		delete[](tmp_payload);
+	}
+}
+
 aws_connection_mqtt::aws_connection_mqtt() {
 	mqtt_initParams = iotClientInitParamsDefault;
 	mqtt_connectParams = iotClientConnectParamsDefault;
@@ -69,4 +96,13 @@ IoT_Error_t aws_connection_mqtt::connect(int reconnect_count = 3) {
 
 IoT_Error_t aws_connection_mqtt::publish_msg(aws_mqtt_message &msg) {
 	return aws_iot_mqtt_publish(&(aws_connection::get_client()), msg.get_topic().data(), msg.get_topic().length(), msg.get_raw_msg());
+}
+
+IoT_Error_t aws_connection_mqtt::attach_topic(std::string &topic) {
+	char *tmp_topic = new char [topic.length()];
+	if (!tmp_topic)
+		return FAILURE;
+
+	memcpy(tmp_topic, topic.data(), topic.length());
+	return aws_iot_mqtt_subscribe(&(aws_connection::get_client()), tmp_topic, topic.length(), QOS0, aws_connection_mqtt::receive_handler, NULL);
 }

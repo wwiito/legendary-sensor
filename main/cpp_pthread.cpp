@@ -210,6 +210,14 @@ extern "C" void app_main(void)
     if (SUCCESS != c.init_connection())
         abort();
     c.connect(3);
+    ESP_LOGI(TAG, "Attach");
+    {
+    c.attach_topic(aws_thing_mqtt_receive);
+    std::string tmp = "{}";
+    aws_mqtt_message m = aws_mqtt_message(QOS0, reinterpret_cast<void *>(&tmp[0]), tmp.length(), aws_thing_mqtt_request);
+    c.publish_msg(m);
+    }
+    ESP_LOGI(TAG, "Done");
     measurement_done.take();
 
     /* Register channel */
@@ -242,15 +250,14 @@ extern "C" void app_main(void)
 	}
 
     auto s = measurement_results.dump();
-    aws_mqtt_message msg = aws_mqtt_message(QOS0, reinterpret_cast<void *>(&s[0]), s.length(), c.construct_update_topic());
+    aws_mqtt_message msg = aws_mqtt_message(QOS0, reinterpret_cast<void *>(&s[0]), s.length(), aws_thing_mqtt_channel);
     c.publish_msg(msg);
 
-    if( NETWORK_ATTEMPTING_RECONNECT == c.yeld(1)) {
-    	ESP_LOGI(TAG, "reconnecting");
-    }
-
-
     ESP_LOGI(TAG, "Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
+    for(int i=0; i<5; i++){
+    	c.yeld(1);
+    	vTaskDelay(1);
+    }
     ESP_LOGI(TAG, "Device sleep start, %ds\n", sleep_length);
     esp_sleep_enable_timer_wakeup(sleep_length * 1000000);
     esp_deep_sleep_start();
