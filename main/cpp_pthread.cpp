@@ -28,6 +28,9 @@
 
 #include "i2cbus.h"
 
+#include "awsconnection.h"
+#include "awsshadow.h"
+
 const std::string cfg_partition("config");
 const std::string cfg_mountpoint("/config");
 std::string device_ID("esp32-test-idf");
@@ -212,10 +215,9 @@ extern "C" void app_main(void)
     c.connect(3);
     ESP_LOGI(TAG, "Attach");
     {
-    c.attach_topic(aws_thing_mqtt_receive);
-    std::string tmp = "{}";
-    aws_mqtt_message m = aws_mqtt_message(QOS0, reinterpret_cast<void *>(&tmp[0]), tmp.length(), aws_thing_mqtt_request);
-    c.publish_msg(m);
+		c.attach_topic(aws_thing_mqtt_receive);
+		aws_mqtt_message m = aws_mqtt_message(std::string("{}"), aws_thing_mqtt_request);
+		c.publish_msg(m);
     }
     ESP_LOGI(TAG, "Done");
     measurement_done.take();
@@ -249,8 +251,7 @@ extern "C" void app_main(void)
     	ESP_LOGI(TAG, "Failed to get battery voltage");
 	}
 
-    auto s = measurement_results.dump();
-    aws_mqtt_message msg = aws_mqtt_message(QOS0, reinterpret_cast<void *>(&s[0]), s.length(), aws_thing_mqtt_channel);
+    aws_mqtt_message msg = aws_mqtt_message(measurement_results, aws_thing_mqtt_channel);
     c.publish_msg(msg);
 
     ESP_LOGI(TAG, "Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));

@@ -16,6 +16,7 @@ std::string aws_connection_mqtt::TAG = "AWS_CONNECTION_MQTT";
 bool aws_connection_mqtt::param_log_received_messages = true;
 
 void aws_connection_mqtt::receive_handler(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData) {
+	aws_connection_mqtt *t = (aws_connection_mqtt*)pData;
 	ESP_LOGI(TAG.data(), "In receive handler");
 	if (aws_connection_mqtt::param_log_received_messages) {
 		char *tmp_topic = new char [topicNameLen+1];
@@ -35,6 +36,7 @@ void aws_connection_mqtt::receive_handler(AWS_IoT_Client *pClient, char *topicNa
 		delete[](tmp_topic);
 		delete[](tmp_payload);
 	}
+	t->on_receive();
 }
 
 aws_connection_mqtt::aws_connection_mqtt() {
@@ -104,5 +106,9 @@ IoT_Error_t aws_connection_mqtt::attach_topic(std::string &topic) {
 		return FAILURE;
 
 	memcpy(tmp_topic, topic.data(), topic.length());
-	return aws_iot_mqtt_subscribe(&(aws_connection::get_client()), tmp_topic, topic.length(), QOS0, aws_connection_mqtt::receive_handler, NULL);
+	return aws_iot_mqtt_subscribe(&(aws_connection::get_client()), tmp_topic, topic.length(), QOS0, aws_connection_mqtt::receive_handler, this);
+}
+
+void aws_connection_mqtt::on_receive() {
+	ESP_LOGI(TAG.data(), "on_receive");
 }

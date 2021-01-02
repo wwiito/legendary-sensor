@@ -12,6 +12,8 @@
 #include "awsmessage.h"
 #include "espfile.h"
 
+#include <functional>
+
 
 class aws_connection {
 public:
@@ -55,6 +57,7 @@ public:
 	void device_name(std::string &name) {thing_name = name;}
 	IoT_Error_t publish_msg(aws_mqtt_message &msg);
 	IoT_Error_t attach_topic(std::string &topic);
+	void on_receive();
 	static void receive_handler(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData);
 
 	std::string construct_update_topic() {
