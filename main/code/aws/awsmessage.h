@@ -24,9 +24,12 @@ public:
 	aws_mqtt_message(const std::string payload, std::string topic, QoS q = QOS0);
 	aws_mqtt_message(nlohmann::json j, std::string topic, QoS q = QOS0);
 	aws_mqtt_message(const aws_mqtt_message &m);
+	aws_mqtt_message(aws_mqtt_message &&m);
 	virtual ~aws_mqtt_message();
 	const std::string & get_topic() {return mqtt_topic;}
 	IoT_Publish_Message_Params * get_raw_msg();
+	void raw_to_json();
+	nlohmann::json & get_json();
 private:
 	void base_raw_init(QoS q);
 	void string_to_raw(std::string &from);

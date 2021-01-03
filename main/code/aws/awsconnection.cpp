@@ -11,32 +11,43 @@
 #include <freertos/task.h>
 
 #include <cstring>
+#include <string>
 
 std::string aws_connection_mqtt::TAG = "AWS_CONNECTION_MQTT";
-bool aws_connection_mqtt::param_log_received_messages = true;
+bool aws_connection_mqtt::param_log_received_messages = false;
 
+
+#define TAG_STATIC "aws_connection_mqtt::receive_handler"
 void aws_connection_mqtt::receive_handler(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData) {
 	aws_connection_mqtt *t = (aws_connection_mqtt*)pData;
+	char *tmp_topic = new char [topicNameLen+1];
 	ESP_LOGI(TAG.data(), "In receive handler");
-	if (aws_connection_mqtt::param_log_received_messages) {
-		char *tmp_topic = new char [topicNameLen+1];
-		char *tmp_payload = new char[params->payloadLen+1];
-		if(!tmp_topic || !tmp_payload) {
-			ESP_LOGI(TAG.data(), "Memory allocation fail");
-			return;
-		}
-		memset(tmp_topic, 0x00, topicNameLen+1);
-		memset(tmp_payload, 0x00, params->payloadLen+1);
 
-		memcpy(tmp_topic, topicName, topicNameLen);
+	if (!tmp_topic) {
+		ESP_LOGE(TAG_STATIC, "Memory alocation fail!");
+		throw;
+	}
+	memset(tmp_topic, 0x00, topicNameLen+1);
+	memcpy(tmp_topic, topicName, topicNameLen);
+
+	if (aws_connection_mqtt::param_log_received_messages) {
+		char *tmp_payload = new char[params->payloadLen+1];
+		if(!tmp_payload) {
+			ESP_LOGI(TAG_STATIC, "Memory allocation fail");
+			throw;
+		}
+
+		memset(tmp_payload, 0x00, params->payloadLen+1);
 		memcpy(tmp_payload, params->payload, params->payloadLen);
 
 		ESP_LOGI(TAG.data(), "topic name: %s", tmp_topic);
 		ESP_LOGI(TAG.data(), "Payload: %s", tmp_payload);
+
 		delete[](tmp_topic);
 		delete[](tmp_payload);
 	}
-	t->on_receive();
+	aws_mqtt_message m = aws_mqtt_message(params->payload, params->payloadLen, std::string(tmp_topic));
+	t->on_receive(std::move(m));
 }
 
 aws_connection_mqtt::aws_connection_mqtt() {
@@ -109,6 +120,11 @@ IoT_Error_t aws_connection_mqtt::attach_topic(std::string &topic) {
 	return aws_iot_mqtt_subscribe(&(aws_connection::get_client()), tmp_topic, topic.length(), QOS0, aws_connection_mqtt::receive_handler, this);
 }
 
-void aws_connection_mqtt::on_receive() {
+void aws_connection_mqtt::on_receive(aws_mqtt_message m) {
 	ESP_LOGI(TAG.data(), "on_receive");
+	ESP_LOGI(TAG.data(), "Received msg in topic: %s", m.get_topic().c_str());
+	m.raw_to_json();
+	nlohmann::json &j = m.get_json();
+	ESP_LOGI(TAG.data(), "Unique_id: %X", j["state"]["reported"]["unique_id"].get<int>());
+
 }
