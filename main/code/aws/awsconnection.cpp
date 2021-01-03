@@ -13,7 +13,6 @@
 #include <cstring>
 #include <string>
 
-std::string aws_connection_mqtt::TAG = "AWS_CONNECTION_MQTT";
 bool aws_connection_mqtt::param_log_received_messages = false;
 
 
@@ -21,7 +20,7 @@ bool aws_connection_mqtt::param_log_received_messages = false;
 void aws_connection_mqtt::receive_handler(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData) {
 	aws_connection_mqtt *t = (aws_connection_mqtt*)pData;
 	char *tmp_topic = new char [topicNameLen+1];
-	ESP_LOGI(TAG.data(), "In receive handler");
+	ESP_LOGI(TAG_STATIC, "In receive handler");
 
 	if (!tmp_topic) {
 		ESP_LOGE(TAG_STATIC, "Memory alocation fail!");
@@ -40,14 +39,14 @@ void aws_connection_mqtt::receive_handler(AWS_IoT_Client *pClient, char *topicNa
 		memset(tmp_payload, 0x00, params->payloadLen+1);
 		memcpy(tmp_payload, params->payload, params->payloadLen);
 
-		ESP_LOGI(TAG.data(), "topic name: %s", tmp_topic);
-		ESP_LOGI(TAG.data(), "Payload: %s", tmp_payload);
+		ESP_LOGI(TAG_STATIC, "topic name: %s", tmp_topic);
+		ESP_LOGI(TAG_STATIC, "Payload: %s", tmp_payload);
 
-		delete[](tmp_topic);
 		delete[](tmp_payload);
 	}
 	aws_mqtt_message m = aws_mqtt_message(params->payload, params->payloadLen, std::string(tmp_topic));
 	t->on_receive(std::move(m));
+	delete[](tmp_topic);
 }
 
 aws_connection_mqtt::aws_connection_mqtt() {
@@ -128,3 +127,8 @@ void aws_connection_mqtt::on_receive(aws_mqtt_message m) {
 	ESP_LOGI(TAG.data(), "Unique_id: %X", j["state"]["reported"]["unique_id"].get<int>());
 
 }
+
+void aws_connection_mqtt::register_message_handler(std::string topic, void (*f)(aws_mqtt_message, void*), void *param) {
+	msg_client_map[topic] = std::make_tuple(f, param);
+}
+

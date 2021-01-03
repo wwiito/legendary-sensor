@@ -13,6 +13,8 @@
 #include "espfile.h"
 
 #include <functional>
+#include <map>
+#include <tuple>
 
 
 class aws_connection {
@@ -60,6 +62,8 @@ public:
 	void on_receive(aws_mqtt_message m);
 	static void receive_handler(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData);
 
+	void register_message_handler(std::string topic, void (*)(aws_mqtt_message, void*), void *param);
+
 	std::string construct_update_topic() {
 		std::string tmp = construct_base_topic() + "/shadow/update";
 		return tmp;
@@ -84,7 +88,9 @@ private:
 
 	std::string client_id;
 	std::string thing_name;
-	static std::string TAG;
+	std::map<std::string, std::tuple<void (*)(aws_mqtt_message, void*), void *>> msg_client_map;
+
+	std::string TAG = "AWS_CONNECTION_MQTT";
 	static bool param_log_received_messages;
 };
 
