@@ -58,7 +58,7 @@ public:
 	void client_ID(std::string &id);
 	void device_name(std::string &name) {thing_name = name;}
 	IoT_Error_t publish_msg(aws_mqtt_message &msg);
-	IoT_Error_t attach_topic(std::string &topic);
+	IoT_Error_t attach_topic(std::string topic);
 	void on_receive(aws_mqtt_message m);
 	static void receive_handler(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData);
 

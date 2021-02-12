@@ -18,8 +18,8 @@
 
 #include "espfile.h"
 
-#include "awspublishmessage.h"
 #include "awsconnection.h"
+#include "awsmessage.h"
 
 class aws {
 public:

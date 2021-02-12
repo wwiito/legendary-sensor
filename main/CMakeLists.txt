@@ -15,5 +15,5 @@ idf_component_register(SRCS "cpp_pthread.cpp"
                                  "./code/drivers"
                                  "./code/drivers/bus")
   
-component_compile_options(-std=c++14)                 
+component_compile_options(-std=c++17)                 
 spiffs_create_partition_image(config  ./data FLASH_IN_PROJECT)

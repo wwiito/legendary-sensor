@@ -110,7 +110,7 @@ IoT_Error_t aws_connection_mqtt::publish_msg(aws_mqtt_message &msg) {
 	return aws_iot_mqtt_publish(&(aws_connection::get_client()), msg.get_topic().data(), msg.get_topic().length(), msg.get_raw_msg());
 }
 
-IoT_Error_t aws_connection_mqtt::attach_topic(std::string &topic) {
+IoT_Error_t aws_connection_mqtt::attach_topic(std::string topic) {
 	char *tmp_topic = new char [topic.length()];
 	if (!tmp_topic)
 		return FAILURE;
@@ -122,13 +122,17 @@ IoT_Error_t aws_connection_mqtt::attach_topic(std::string &topic) {
 void aws_connection_mqtt::on_receive(aws_mqtt_message m) {
 	ESP_LOGI(TAG.data(), "on_receive");
 	ESP_LOGI(TAG.data(), "Received msg in topic: %s", m.get_topic().c_str());
-	m.raw_to_json();
-	nlohmann::json &j = m.get_json();
-	ESP_LOGI(TAG.data(), "Unique_id: %X", j["state"]["reported"]["unique_id"].get<int>());
-
+	/* Try to find element for that topic */
+	auto t = msg_client_map.find(m.get_topic());
+	if (t != msg_client_map.end()) {
+		auto [fun, ptr] = t->second;
+		fun(std::move(m), ptr);
+	} else {
+		ESP_LOGE(TAG.data(), "No handler registered for topic: %s", m.get_topic().c_str());
+	}
 }
 
-void aws_connection_mqtt::register_message_handler(std::string topic, void (*f)(aws_mqtt_message, void*), void *param) {
-	msg_client_map[topic] = std::make_tuple(f, param);
+void aws_connection_mqtt::register_message_handler(std::string topic, void (*f)(aws_mqtt_message, void*), void *ptr) {
+	msg_client_map[topic] = std::make_tuple(f, ptr);
 }
 

@@ -5,7 +5,7 @@
  *      Author: wit
  */
 
-#include "aws.h"
+#include <aws.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 

@@ -28,6 +28,7 @@
 
 #include "i2cbus.h"
 
+#include "rtos_semaphore.h"
 #include "awsconnection.h"
 #include "awsshadow.h"
 
@@ -59,28 +60,6 @@ esp_pthread_cfg_t create_config(const char *name, int core_id, int stack, int pr
     cfg.prio = prio;
     return cfg;
 }
-
-class rtos_semaphore {
-public:
-	rtos_semaphore() {
-		s = xSemaphoreCreateBinary();
-		if (s == NULL) {
-			ESP_LOGI("semaphore", "Failed to create");
-		}
-	}
-	void give() {
-		xSemaphoreGive(s);
-	}
-	bool take(int timeout = portMAX_DELAY) {
-		if (xSemaphoreTake(s, timeout) == pdTRUE) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-private:
-	SemaphoreHandle_t s;
-};
 
 //void handle_onewire_sensor_bus(nlohmann::json &cfg, int bus_id, rtos_semaphore &done_sem, rtos_semaphore &data_sem) {
 void handle_onewire_sensor_bus(nlohmann::json &cfg, int bus_id, rtos_semaphore &done_sem, rtos_semaphore &result_sem, nlohmann::json &results) {
@@ -207,30 +186,27 @@ extern "C" void app_main(void)
     c.private_Key(aws_dev_private_key);
     c.client_ID(device_ID);
     c.device_name(aws_thing_name);
-
     w.wait_for_ready();
 
     if (SUCCESS != c.init_connection())
         abort();
     c.connect(3);
-    ESP_LOGI(TAG, "Attach");
-    {
-		c.attach_topic(aws_thing_mqtt_receive);
-		aws_mqtt_message m = aws_mqtt_message(std::string("{}"), aws_thing_mqtt_request);
-		c.publish_msg(m);
-    }
-    ESP_LOGI(TAG, "Done");
+
+    awsshadow shadow = awsshadow(c, aws_thing_name);
+    shadow.wait_shadow_ready();
     measurement_done.take();
 
-    /* Register channel */
-    //aws_iot_mqtt_subscribe(&c.client, &aws_thing_mqtt_receive[0], aws_thing_mqtt_receive.length(), QOS0, iot_subscribe_callback_handler, NULL);
 
-    /* Device IDX */
-    measurement_results["state"]["reported"]["unique_id"] = dev_id;
-    measurement_results["state"]["reported"]["id"] = device_idx;
-    measurement_results["state"]["reported"]["sensors"]["sensor_stats"]["soc"]   	   = 35;
-    measurement_results["state"]["reported"]["sensors"]["sensor_stats"]["rssid"]     = 15;
-    measurement_results["state"]["reported"]["sensors"]["sensor_stats"]["location"]  = cfg["device"]["device_location"].get<std::string>();
+    {
+    shadow.lock_shadow();
+    nlohmann::json &data = shadow.get_shadow_json();
+    data["state"]["reported"]["unique_id"] = dev_id;
+    data["state"]["reported"]["id"] = device_idx;
+    data["state"]["reported"]["sensors"]["sensor_stats"]["soc"]   	  = 10;
+    data["state"]["reported"]["sensors"]["sensor_stats"]["rssid"]     = 15;
+    data["state"]["reported"]["sensors"]["sensor_stats"]["location"]  = cfg["device"]["device_location"].get<std::string>();
+    shadow.unlock_shadow();
+    }
 
     /* Battery RSOC and Voltage */
     i2cbus i(0, GPIO_NUM_18, GPIO_NUM_19);
@@ -239,20 +215,24 @@ extern "C" void app_main(void)
     	int volts = ((*v)[1] << 8) | (*v)[0];
     	ESP_LOGI(TAG, "volts: %d", volts);
 
+	    {
+	    shadow.lock_shadow();
+	    nlohmann::json &data = shadow.get_shadow_json();
 		int count = measurement_results["state"]["reported"]["sensors"]["sensor_count"];
 		std::string sensor_name = "sensor_" + std::to_string(count);
-		measurement_results["state"]["reported"]["sensors"][sensor_name]["meas_type"]   = "battery_voltage";
-		measurement_results["state"]["reported"]["sensors"][sensor_name]["type"]        = "V";
-		measurement_results["state"]["reported"]["sensors"][sensor_name]["name"]        = "battery_voltage";
-		measurement_results["state"]["reported"]["sensors"][sensor_name]["value"]       = volts;
-		measurement_results["state"]["reported"]["sensors"][sensor_name]["sensor_id"]   = 10;
-		measurement_results["state"]["reported"]["sensors"]["sensor_count"] = count + 1;
+		data["state"]["reported"]["sensors"][sensor_name]["meas_type"]   = "battery_voltage";
+		data["state"]["reported"]["sensors"][sensor_name]["type"]        = "V";
+		data["state"]["reported"]["sensors"][sensor_name]["name"]        = "battery_voltage";
+		data["state"]["reported"]["sensors"][sensor_name]["value"]       = volts;
+		data["state"]["reported"]["sensors"][sensor_name]["sensor_id"]   = 10;
+		data["state"]["reported"]["sensors"]["sensor_count"] = count + 1;
+	    shadow.unlock_shadow();
+	    }
     } catch (...) {
     	ESP_LOGI(TAG, "Failed to get battery voltage");
 	}
 
-    aws_mqtt_message msg = aws_mqtt_message(measurement_results, aws_thing_mqtt_channel);
-    c.publish_msg(msg);
+    shadow.publish();
 
     ESP_LOGI(TAG, "Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
     for(int i=0; i<5; i++){

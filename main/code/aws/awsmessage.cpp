@@ -66,6 +66,19 @@ aws_mqtt_message::~aws_mqtt_message(){
 		delete [] ((char*)raw_data.payload);
 }
 
+aws_mqtt_message&  aws_mqtt_message::operator=(aws_mqtt_message &&m) {
+	ESP_LOGE("msg", "operator=move");
+	dtype = m.dtype;
+	json_data = std::move(m.json_data);
+	string_data = std::move(m.string_data);
+	mqtt_topic = std::move(m.mqtt_topic);
+	if (m.raw_data.payloadLen != 0) {
+		memcpy(&raw_data, &m.raw_data, sizeof(IoT_Publish_Message_Params));
+		m.raw_data.payload = NULL;
+		m.raw_data.payloadLen = 0;
+	}
+	return *this;
+}
 
 void aws_mqtt_message::base_raw_init(QoS q) {
 	raw_data.qos = q;
